@@ -7,9 +7,12 @@ import { resolve } from "node:path"
 // ---------------------------------------------------------------------
 // Stack configuration
 // ---------------------------------------------------------------------
-const region = new Config().require("region")
+const config = new Config()
+const region = config.require("region")
 const project = new Config("gcp").require("project")
-const heliusWebhookSecret = new Config().requireSecret("heliusWebhookSecret")
+const heliusWebhookSecret = config.requireSecret("heliusWebhookSecret")
+const solRpcUrl = config.requireSecret("solRpcUrl")
+const solPk = config.requireSecret("solPk")
 
 // ---------------------------------------------------------------------
 // Google Cloud APIs
@@ -463,6 +466,142 @@ const pusherService = new gcp.cloudrunv2.Service(
       grantPublishForPvaultPusher
     ]
   }
+)
+
+// ---------------------------------------------------------------------
+// Hourly pvault emitter job
+// ---------------------------------------------------------------------
+const pvaultEmitterAccount = new gcp.serviceaccount.Account(
+  "pvault-emitter-sa",
+  { accountId: "pvault-emitter-sa", displayName: "Pvault emitter" },
+  { dependsOn: [projectServices.iam] }
+)
+
+const pvaultEmitterInvokerAccount = new gcp.serviceaccount.Account(
+  "pvault-emitter-invoker-sa",
+  { accountId: "pvault-emitter-invoker-sa", displayName: "Pvault emitter scheduler" },
+  { dependsOn: [projectServices.iam] }
+)
+
+const solRpcUrlSecret = new gcp.secretmanager.Secret(
+  "sol-rpc-url",
+  { secretId: "sol-rpc-url", replication: { auto: {} } },
+  { dependsOn: [projectServices.secretmanager] }
+)
+
+const solRpcUrlSecretVersion = new gcp.secretmanager.SecretVersion("sol-rpc-url-version", {
+  secret: solRpcUrlSecret.id,
+  secretData: solRpcUrl
+})
+
+const grantAccessSolRpcUrlForPvaultEmitter = new gcp.secretmanager.SecretIamMember(
+  "grant-access-sol-rpc-url-for-pvault-emitter",
+  {
+    secretId: solRpcUrlSecret.id,
+    role: "roles/secretmanager.secretAccessor",
+    member: interpolate`serviceAccount:${pvaultEmitterAccount.email}`
+  }
+)
+
+const solPkSecret = new gcp.secretmanager.Secret(
+  "sol-pk",
+  { secretId: "sol-pk", replication: { auto: {} } },
+  { dependsOn: [projectServices.secretmanager] }
+)
+
+const solPkSecretVersion = new gcp.secretmanager.SecretVersion("sol-pk-version", {
+  secret: solPkSecret.id,
+  secretData: solPk
+})
+
+const grantAccessSolPkForPvaultEmitter = new gcp.secretmanager.SecretIamMember(
+  "grant-access-sol-pk-for-pvault-emitter",
+  {
+    secretId: solPkSecret.id,
+    role: "roles/secretmanager.secretAccessor",
+    member: interpolate`serviceAccount:${pvaultEmitterAccount.email}`
+  }
+)
+
+const pvaultEmitter = new gcp.cloudrunv2.Job(
+  "pvault-emitter",
+  {
+    name: "pvault-emitter",
+    location: region,
+    deletionProtection: false,
+    template: {
+      taskCount: 1,
+      parallelism: 1,
+      template: {
+        serviceAccount: pvaultEmitterAccount.email,
+        timeout: "300s",
+        maxRetries: 0,
+        containers: [
+          {
+            image: images.eventEmitter.ref,
+            resources: { limits: { cpu: "1", memory: "512Mi" } },
+            envs: [
+              {
+                name: "SOL_RPC_URL",
+                valueSource: {
+                  secretKeyRef: {
+                    secret: solRpcUrlSecret.secretId,
+                    version: solRpcUrlSecretVersion.version
+                  }
+                }
+              },
+              {
+                name: "SOL_PK",
+                valueSource: {
+                  secretKeyRef: {
+                    secret: solPkSecret.secretId,
+                    version: solPkSecretVersion.version
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    dependsOn: [
+      projectServices.run,
+      grantAccessSolRpcUrlForPvaultEmitter,
+      grantAccessSolPkForPvaultEmitter
+    ]
+  }
+)
+
+const grantInvokeForPvaultEmitterInvoker = new gcp.cloudrunv2.JobIamMember(
+  "grant-invoke-for-pvault-emitter-invoker",
+  {
+    project: pvaultEmitter.project,
+    location: pvaultEmitter.location,
+    name: pvaultEmitter.name,
+    role: "roles/run.invoker",
+    member: interpolate`serviceAccount:${pvaultEmitterInvokerAccount.email}`
+  }
+)
+
+new gcp.cloudscheduler.Job(
+  "pvault-emitter-hourly",
+  {
+    name: "pvault-emitter-hourly",
+    region,
+    schedule: "0 * * * *",
+    timeZone: "Etc/UTC",
+    retryConfig: { retryCount: 0 },
+    httpTarget: {
+      httpMethod: "POST",
+      uri: interpolate`https://run.googleapis.com/v2/projects/${pvaultEmitter.project}/locations/${pvaultEmitter.location}/jobs/${pvaultEmitter.name}:run`,
+      headers: { "Content-Type": "application/json" },
+      body: Buffer.from("{}").toString("base64"),
+      oauthToken: { serviceAccountEmail: pvaultEmitterInvokerAccount.email }
+    }
+  },
+  { dependsOn: [projectServices.scheduler, grantInvokeForPvaultEmitterInvoker] }
 )
 
 // ---------------------------------------------------------------------
