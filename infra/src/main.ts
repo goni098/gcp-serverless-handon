@@ -431,7 +431,7 @@ const pusherService = new gcp.cloudrunv2.Service(
     invokerIamDisabled: true,
     template: {
       serviceAccount: pvaultPusherAccount.email,
-      scaling: { minInstanceCount: 0, maxInstanceCount: 1 },
+      scaling: { minInstanceCount: 1, maxInstanceCount: 3 },
       containers: [
         {
           image: images.eventPusher.ref,
