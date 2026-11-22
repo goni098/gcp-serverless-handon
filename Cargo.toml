@@ -40,7 +40,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 solana-sdk = { version = "5" }
 solana-client = { version = "4" }
-solana-system-interface = { version = "3", features = ["wincode"] }
+solana-system-interface = { version = "3" }
 spl-token-2022-interface = { version = "4" }
 spl-associated-token-account-interface = { version = "2" }
 

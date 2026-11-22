@@ -319,7 +319,7 @@ const pvaultSubscriber = new gcp.cloudrunv2.Service(
       containers: [
         {
           image: images.eventSubscriber.ref,
-          ports: { containerPort: 8080 },
+          ports: { containerPort: 8080, name: "h2c" },
           startupProbe: {
             tcpSocket: { port: 8080 },
             periodSeconds: 5,
@@ -435,7 +435,7 @@ const pusherService = new gcp.cloudrunv2.Service(
       containers: [
         {
           image: images.eventPusher.ref,
-          ports: { containerPort: 8080 },
+          ports: { name: "h2c", containerPort: 8080 },
           startupProbe: {
             httpGet: { path: "/", port: 8080 },
             periodSeconds: 5,
@@ -641,7 +641,7 @@ const apiService = new gcp.cloudrunv2.Service(
       containers: [
         {
           image: images.api.ref,
-          ports: { containerPort: 8080 },
+          ports: { name: "h2c", containerPort: 8080 },
           startupProbe: {
             httpGet: { path: "/", port: 8080 },
             periodSeconds: 5,
