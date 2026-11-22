@@ -38,7 +38,7 @@ where
             .get(header::AUTHORIZATION)
             .ok_or_else(|| HttpException::unauthorized("missing authorization"))?;
 
-        if !bool::from(expected_secret.as_bytes().eq(secret.as_bytes())) {
+        if !expected_secret.as_bytes().eq(secret.as_bytes()) {
             return Err(HttpException::forbidden(
                 "invalid Helius webhook authorization",
             ));
