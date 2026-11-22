@@ -64,6 +64,7 @@ const databaseInstance = new gcp.sql.DatabaseInstance(
     region,
     deletionProtection: false,
     settings: {
+      deletionProtectionEnabled: false,
       edition: "ENTERPRISE",
       tier: "db-f1-micro",
       availabilityType: "ZONAL",
