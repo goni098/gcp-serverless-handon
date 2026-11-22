@@ -1,0 +1,20 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio.workspace = true
+axum.workspace = true
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+google-cloud-pubsub.workspace = true
+base64.workspace = true
+bytes.workspace = true
+borsh.workspace = true
+
+shared = { path = "../../shared", default-features = false }
+http = { path = "../../http", default-features = false }
+error = { path = "../../error", default-features = false }
+database = { path = "../../database", default-features = false }

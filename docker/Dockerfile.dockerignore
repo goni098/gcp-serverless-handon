@@ -1,0 +1,12 @@
+target
+.git
+.codex
+.agents
+.aws
+infra
+README.md
+.vscode
+.env
+.env.*
+.github
+gha-creds-*.json

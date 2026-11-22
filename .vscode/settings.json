@@ -1,0 +1,6 @@
+{
+  "rust-analyzer.linkedProjects": ["./Cargo.toml", "./pvault/Cargo.toml"],
+  "evenBetterToml.schema.associations": {
+    "/pvault/programs/pvault/Cargo\\.toml$": "https://raw.githubusercontent.com/SchemaStore/schemastore/cf458e6e33141d3a0506f24279de79eeeeb5130a/src/schemas/json/cargo.json"
+  }
+}

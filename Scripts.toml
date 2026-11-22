@@ -1,0 +1,19 @@
+
+[global_env]
+
+[scripts.clean]
+command = "(cargo +nightly fmt --all && cargo clippy --fix --allow-dirty) && (cd pvault && cargo clippy --fix --allow-dirty) && (cd infra && pnpm run format && pnpm run lint:fix)"
+
+[scripts.migrate]
+command = "cd crates/database/ && cargo run -p migration -- {{subcommand}} {{options}}"
+args = ["subcommand", "options"]
+defaults = { subcommand = "--help", options = "" }
+
+[scripts.migrate-up]
+command = "cd crates/database/ && cargo run -p migration -- up"
+
+[scripts.migrate-down]
+command = "cd crates/database/ && cargo run -p migration -- down"
+
+[scripts.migrate-status]
+command = "cd crates/database/ && cargo run -p migration -- status"

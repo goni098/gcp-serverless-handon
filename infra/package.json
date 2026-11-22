@@ -1,0 +1,22 @@
+{
+  "name": "serverless",
+  "main": "src/main.ts",
+  "scripts": {
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix ."
+  },
+  "dependencies": {
+    "@pulumi/docker-build": "^0.0.23",
+    "@pulumi/gcp": "^10.5.0",
+    "@pulumi/pulumi": "^3.277.0",
+    "@pulumi/random": "^4.21.6"
+  },
+  "devDependencies": {
+    "@types/node": "^26",
+    "oxfmt": "^0.79.0",
+    "oxlint": "^1.94.0",
+    "typescript": "^7.0.2"
+  }
+}

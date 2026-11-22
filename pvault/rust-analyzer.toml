@@ -1,0 +1,3 @@
+[diagnostics]
+# Anchor's generated IDL helpers can trigger this hint on active program definitions.
+disabled = ["inactive_code"]

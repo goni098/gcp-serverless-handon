@@ -1,0 +1,3 @@
+config:
+  gcp:project: goni-serverless-dev-20261113
+  serverless:region: asia-southeast3

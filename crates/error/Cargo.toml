@@ -1,0 +1,13 @@
+[package]
+name = "error"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror.workspace = true
+sea-orm.workspace = true
+serde_json.workspace = true
+google-cloud-gax.workspace = true
+google-cloud-pubsub.workspace = true
+solana-client.workspace = true
+solana-sdk.workspace = true

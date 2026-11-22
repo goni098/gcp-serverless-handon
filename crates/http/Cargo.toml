@@ -1,0 +1,18 @@
+[package]
+name = "http"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum.workspace = true
+thiserror.workspace = true
+cloudevents-sdk.workspace = true
+google-cloud-pubsub.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+sea-orm.workspace = true
+
+error = { path = "../error", default-features = false }
+
+
