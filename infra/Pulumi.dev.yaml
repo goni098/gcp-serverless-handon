@@ -1,3 +1,9 @@
 config:
   gcp:project: goni-serverless-dev-20261113
   serverless:region: asia-southeast3
+  serverless:heliusWebhookSecret:
+    secure: AAABALNGFMyCZENbudCxnmgvjlqm7yVXZ2NcefNuCQeaWBGLJgBq
+  serverless:solRpcUrl:
+    secure: AAABALXioh9NO2YgbpO1+ufmtsmoDra/UJlEOeGTyHO7QCXRg3ZAlb0r1gXZXRviIxIUhaAbSJ17KntkBKd40vKb1YzQl5WVl710/6a3DhHdhlqNVhhImntXmsgBoI4BI8OvcY301DWiueI=
+  serverless:solPk:
+    secure: AAABAKl9dfApIyF0EW5dxXwKkmkt9yCDhNJMEhnH+x4xyZZxWZQREpGaNBlhh1XqJnhTqB5jdimi01F0tnsoKmcLG/h6b0GfZfUFpazXBSFLhNnoMHpOWFzmU1S6azDSYK3mduCVfFZBtMfBl3xwa9ax1ejovUgo

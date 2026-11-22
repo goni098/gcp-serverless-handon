@@ -1,5 +1,5 @@
 [package]
-name = "pubsub"
+name = "pvault-pusher"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,11 +7,13 @@ edition = "2024"
 tokio.workspace = true
 axum.workspace = true
 tracing.workspace = true
-borsh.workspace = true
+serde.workspace = true
 serde_json.workspace = true
+google-cloud-pubsub.workspace = true
+base64.workspace = true
+bytes.workspace = true
+borsh.workspace = true
 
-http = { path = "../../http", default-features = false }
-pvault-client = { path = "../../../pvault/clients/pvault", default-features = false }
 shared = { path = "../../shared", default-features = false }
-database = { path = "../../database", default-features = false }
+http = { path = "../../http", default-features = false }
 error = { path = "../../error", default-features = false }

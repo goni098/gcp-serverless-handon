@@ -17,3 +17,4 @@ command = "cd crates/database/ && cargo run -p migration -- down"
 
 [scripts.migrate-status]
 command = "cd crates/database/ && cargo run -p migration -- status"
+

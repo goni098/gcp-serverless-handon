@@ -25,7 +25,6 @@ async fn main() -> Result<(), std::io::Error> {
 
     let app = Router::new()
         .route("/", get(async || "API is running"))
-        .merge(routes::helius::routes())
         .merge(routes::stats::routes())
         .layer(middleware::from_fn(http::middlewares::error_reporter))
         .with_state(state);

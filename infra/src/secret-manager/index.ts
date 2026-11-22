@@ -1,1 +1,0 @@
-export { createDatabaseSecret } from "./database"

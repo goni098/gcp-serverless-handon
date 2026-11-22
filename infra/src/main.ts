@@ -1,79 +1,533 @@
-import { createImage } from "./artifact-registry"
-import {
-  createApiCloudRun,
-  createCronJobs,
-  createDatabaseMigrationJob,
-  createPubsubCloudRun
-} from "./cloud-run"
-import { createDatabase } from "./database"
-import { createDatabaseSecret } from "./secret-manager"
+import * as dockerBuild from "@pulumi/docker-build"
+import * as gcp from "@pulumi/gcp"
+import { Config, getStack, interpolate, secret } from "@pulumi/pulumi"
+import { RandomId, RandomPassword } from "@pulumi/random"
+import { resolve } from "node:path"
 
-const {
-  database,
-  databasePscAddress,
-  databasePscEndpoint,
-  databaseInstance,
-  databasePassword,
-  databaseUser
-} = createDatabase()
+// ---------------------------------------------------------------------
+// Stack configuration
+// ---------------------------------------------------------------------
+const region = new Config().require("region")
+const project = new Config("gcp").require("project")
+const heliusWebhookSecret = new Config().requireSecret("heliusWebhookSecret")
 
-const { databaseSecret, databaseSecretVersion } = createDatabaseSecret({
-  database,
-  databasePscAddress,
-  databasePassword,
-  databaseUser
+// ---------------------------------------------------------------------
+// Google Cloud APIs
+// ---------------------------------------------------------------------
+type ProjectServices = Record<keyof typeof projectApis, gcp.projects.Service>
+
+const projectApis = {
+  run: "run.googleapis.com",
+  artifactregistry: "artifactregistry.googleapis.com",
+  compute: "compute.googleapis.com",
+  sqladmin: "sqladmin.googleapis.com",
+  secretmanager: "secretmanager.googleapis.com",
+  iam: "iam.googleapis.com",
+  pubsub: "pubsub.googleapis.com",
+  scheduler: "cloudscheduler.googleapis.com"
+}
+
+const projectServices = Object.fromEntries(
+  Object.entries(projectApis).map(([name, service]) => [
+    name,
+    new gcp.projects.Service(name, { service, disableOnDestroy: false })
+  ])
+) as ProjectServices
+
+// ---------------------------------------------------------------------
+// VPC and subnet
+// ---------------------------------------------------------------------
+const vpc = new gcp.compute.Network(
+  "vpc",
+  { name: "vpc", autoCreateSubnetworks: false },
+  { dependsOn: [projectServices.compute] }
+)
+
+const subnet = new gcp.compute.Subnetwork("subnet", {
+  name: "subnet",
+  network: vpc.id,
+  ipCidrRange: "10.0.0.0/24",
+  region
 })
 
-const migrationJob = createDatabaseMigrationJob({
-  databasePscEndpoint,
-  image: createImage("db-migration-cli"),
-  databaseSecret,
-  databaseSecretVersion
+// ---------------------------------------------------------------------
+// Cloud SQL for PostgreSQL
+// ---------------------------------------------------------------------
+const databaseInstance = new gcp.sql.DatabaseInstance(
+  "sql-instance",
+  {
+    name: "sql-instance",
+    databaseVersion: "POSTGRES_16",
+    region,
+    deletionProtection: false,
+    settings: {
+      edition: "ENTERPRISE",
+      tier: "db-f1-micro",
+      availabilityType: "ZONAL",
+      diskSize: 10,
+      diskAutoresize: true,
+      backupConfiguration: { enabled: false, pointInTimeRecoveryEnabled: false },
+      ipConfiguration: {
+        ipv4Enabled: false,
+        pscConfigs: [{ pscEnabled: true, allowedConsumerProjects: [project] }]
+      }
+    }
+  },
+  { dependsOn: [projectServices.sqladmin] }
+)
+
+const database = new gcp.sql.Database("app-db", {
+  name: "app-db",
+  instance: databaseInstance.name
 })
 
-const apiFn = createApiCloudRun({
-  databasePscEndpoint,
-  image: createImage("api"),
-  databaseSecret,
-  databaseSecretVersion,
-  migrationJob
+const databasePassword = new RandomPassword("db-password", { length: 32, special: false })
+
+const databaseUser = new gcp.sql.User("app-user", {
+  name: "app-user",
+  instance: databaseInstance.name,
+  password: databasePassword.result
 })
 
-const pubsub = createPubsubCloudRun({
-  image: createImage("pubsub"),
-  databasePscEndpoint,
-  databaseSecret,
-  databaseSecretVersion,
-  migrationJob
+// ---------------------------------------------------------------------
+// Private Service Connect
+// ---------------------------------------------------------------------
+const databaseAddress = new gcp.compute.Address("db-psc-ip", {
+  name: "db-psc-ip",
+  region,
+  addressType: "INTERNAL",
+  subnetwork: subnet.id
 })
 
-const cron = createCronJobs({
-  image: createImage("cron"),
-  databasePscEndpoint,
-  databaseSecret,
-  databaseSecretVersion,
-  migrationJob,
-  cleanupTopic: pubsub.topic,
-  cleanupSubscription: pubsub.subscription
+const databaseEndpoint = new gcp.compute.ForwardingRule("db-psc-endpoint", {
+  name: "db-psc-endpoint",
+  region,
+  network: vpc.id,
+  ipAddress: databaseAddress.selfLink,
+  loadBalancingScheme: "",
+  target: databaseInstance.pscServiceAttachmentLink
 })
 
-export const pubsubCloudRunName = pubsub.service.name
-export const cleanupTopicName = pubsub.topic.id
-export const cleanupSubscriptionName = pubsub.subscription.name
+// ---------------------------------------------------------------------
+// Database connection secret
+// ---------------------------------------------------------------------
+const databaseSecret = new gcp.secretmanager.Secret(
+  "database-url",
+  { secretId: "database-url", replication: { auto: {} } },
+  { dependsOn: [projectServices.secretmanager] }
+)
 
-export const cronCreateDataJobName = cron.createDataJob.name
-export const cronQueueCleanupJobName = cron.queueCleanupJob.name
-export const cronCreateDataSchedulerJobName = cron.createDataScheduler.name
-export const cronDeleteDataSchedulerJobName = cron.deleteDataScheduler.name
+const databaseSecretVersion = new gcp.secretmanager.SecretVersion(
+  "database-url-version",
+  {
+    secret: databaseSecret.id,
+    secretData: interpolate`postgresql://${databaseUser.name}:${databasePassword.result}@${databaseAddress.address}:5432/${database.name}`
+  },
+  { dependsOn: [databaseEndpoint] }
+)
 
-export const apiUrl = apiFn.uri
-export const apiCloudRunName = apiFn.name
-export const databaseMigrationJobName = migrationJob.name
+// ---------------------------------------------------------------------
+// Artifact Registry and container images
+// ---------------------------------------------------------------------
+const repository = new gcp.artifactregistry.Repository(
+  "images-repository",
+  { location: region, repositoryId: "images-repository", format: "DOCKER" },
+  { dependsOn: [projectServices.artifactregistry] }
+)
 
-export const databaseInstanceName = databaseInstance.name
-export const databaseName = database.name
-export const databaseUserName = databaseUser.name
-export const databaseEndpointIp = databasePscAddress.address
+const workspaceRoot = resolve(__dirname, "../..")
+const sharedImageBuildConfig = {
+  context: { location: workspaceRoot },
+  dockerfile: { location: resolve(workspaceRoot, "docker/Dockerfile") },
+  platforms: [dockerBuild.Platform.Linux_amd64],
+  buildOnPreview: false
+}
 
-export const databaseSecretId = databaseSecret.secretId
-export const databaseSecretName = databaseSecret.name
+// Build the Rust workspace once so the four runtime images can reuse its cache.
+const workspaceImage = new dockerBuild.Image("workspace-image", {
+  ...sharedImageBuildConfig,
+  target: "build",
+  exports: [{ cacheonly: {} }],
+  push: false
+})
+
+const registryAddress = `${region}-docker.pkg.dev`
+const clientConfig = gcp.organizations.getClientConfigOutput()
+
+function createImage(
+  binary: "api" | "pvault-subscriber" | "pvault-emitter" | "pvault-pusher" | "migration"
+) {
+  return new dockerBuild.Image(
+    `${binary}-image`,
+    {
+      ...sharedImageBuildConfig,
+      target: binary === "migration" ? "migration" : "function",
+      buildArgs: binary === "migration" ? undefined : { FUNCTION: binary },
+      tags: [
+        interpolate`${registryAddress}/${repository.project}/${repository.repositoryId}/${binary}:${getStack()}`
+      ],
+      registries: [
+        {
+          address: registryAddress,
+          username: "oauth2accesstoken",
+          password: secret(clientConfig.accessToken)
+        }
+      ],
+      push: true
+    },
+    { dependsOn: [workspaceImage] }
+  )
+}
+
+const images = {
+  api: createImage("api"),
+  eventSubscriber: createImage("pvault-subscriber"),
+  eventEmitter: createImage("pvault-emitter"),
+  eventPusher: createImage("pvault-pusher"),
+  migration: createImage("migration")
+}
+
+// ---------------------------------------------------------------------
+// Database migration job
+// ---------------------------------------------------------------------
+const migrationAccount = new gcp.serviceaccount.Account(
+  "migration-sa",
+  { accountId: "migration-sa", displayName: "Database migration" },
+  { dependsOn: [projectServices.iam] }
+)
+
+const grantAccessDbSecretForMigration = new gcp.secretmanager.SecretIamMember(
+  "grant-access-for-db-secret-for-migration",
+  {
+    secretId: databaseSecret.id,
+    role: "roles/secretmanager.secretAccessor",
+    member: interpolate`serviceAccount:${migrationAccount.email}`
+  }
+)
+
+const migrationExecution = new RandomId("migration-execution", {
+  byteLength: 8,
+  keepers: {
+    image: images.migration.ref,
+    databaseSecretVersion: databaseSecretVersion.name
+  }
+})
+
+const migration = new gcp.cloudrunv2.Job(
+  "migration",
+  {
+    name: "migration",
+    location: region,
+    deletionProtection: false,
+    // Cloud Run marks the job ready after this execution succeeds.
+    runExecutionToken: interpolate`m${migrationExecution.hex}`,
+    template: {
+      taskCount: 1,
+      parallelism: 1,
+      template: {
+        serviceAccount: migrationAccount.email,
+        timeout: "600s",
+        maxRetries: 0,
+        vpcAccess: {
+          egress: "PRIVATE_RANGES_ONLY",
+          networkInterfaces: [{ network: vpc.id, subnetwork: subnet.id }]
+        },
+        containers: [
+          {
+            image: images.migration.ref,
+            resources: { limits: { cpu: "1", memory: "512Mi" } },
+            envs: [
+              {
+                name: "DATABASE_URL",
+                valueSource: {
+                  secretKeyRef: {
+                    secret: databaseSecret.secretId,
+                    version: databaseSecretVersion.version
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    dependsOn: [projectServices.run, grantAccessDbSecretForMigration, databaseEndpoint],
+    customTimeouts: { create: "15m", update: "15m" }
+  }
+)
+
+// ---------------------------------------------------------------------
+// Pub/Sub topic and private subscriber
+// ---------------------------------------------------------------------
+const pvaultSubscriberAccount = new gcp.serviceaccount.Account(
+  "pvault-subscriber-sa",
+  {
+    accountId: "pvault-subscriber-sa",
+    displayName: "pvault-subscriber-sa"
+  },
+  { dependsOn: [projectServices.iam] }
+)
+
+// identity for pvault subscriber caller
+const pvaultSubscriberInvokerAccount = new gcp.serviceaccount.Account(
+  "pvault-subscriber-invoker-sa",
+  {
+    accountId: "pvault-subscriber-invoker-sa",
+    displayName: "pvault-subscriber-invoker-sa"
+  },
+  { dependsOn: [projectServices.iam] }
+)
+
+const eventTopic = new gcp.pubsub.Topic(
+  "pvault-events",
+  { name: "pvault-events" },
+  { dependsOn: [projectServices.pubsub] }
+)
+
+const grantAccessDbSecretForPvaultSubscriber = new gcp.secretmanager.SecretIamMember(
+  "grant-access-db-secret-for-pvault-subscriber",
+  {
+    secretId: databaseSecret.id,
+    role: "roles/secretmanager.secretAccessor",
+    member: interpolate`serviceAccount:${pvaultSubscriberAccount.email}`
+  }
+)
+
+const pvaultSubscriber = new gcp.cloudrunv2.Service(
+  "pvault-subscriber",
+  {
+    name: "pvault-subscriber",
+    location: region,
+    deletionProtection: false,
+    ingress: "INGRESS_TRAFFIC_INTERNAL_ONLY",
+    invokerIamDisabled: false,
+    template: {
+      serviceAccount: pvaultSubscriberAccount.email,
+      timeout: "300s",
+      maxInstanceRequestConcurrency: 1,
+      scaling: { minInstanceCount: 0, maxInstanceCount: 1 },
+      vpcAccess: {
+        egress: "PRIVATE_RANGES_ONLY",
+        networkInterfaces: [{ network: vpc.id, subnetwork: subnet.id }]
+      },
+      containers: [
+        {
+          image: images.eventSubscriber.ref,
+          ports: { containerPort: 8080 },
+          startupProbe: {
+            tcpSocket: { port: 8080 },
+            periodSeconds: 5,
+            timeoutSeconds: 2,
+            failureThreshold: 48
+          },
+          resources: { limits: { cpu: "1", memory: "512Mi" } },
+          envs: [
+            {
+              name: "DATABASE_URL",
+              valueSource: {
+                secretKeyRef: {
+                  secret: databaseSecret.secretId,
+                  version: databaseSecretVersion.version
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    dependsOn: [
+      projectServices.run,
+      grantAccessDbSecretForPvaultSubscriber,
+      databaseEndpoint,
+      migration
+    ]
+  }
+)
+
+const grantInvokeForPvaultSubscriberInvoker = new gcp.cloudrunv2.ServiceIamMember(
+  "grant-invoke-for-pvault-subscriber-invoker",
+  {
+    project: pvaultSubscriber.project,
+    location: pvaultSubscriber.location,
+    name: pvaultSubscriber.name,
+    role: "roles/run.invoker",
+    member: interpolate`serviceAccount:${pvaultSubscriberInvokerAccount.email}`
+  }
+)
+
+const eventChannel = new gcp.pubsub.Subscription(
+  "pvault-events-channel",
+  {
+    name: "pvault-events-channel",
+    topic: eventTopic.id,
+    ackDeadlineSeconds: 300,
+    messageRetentionDuration: "604800s",
+    expirationPolicy: { ttl: "" },
+    retryPolicy: { minimumBackoff: "10s", maximumBackoff: "600s" },
+    pushConfig: {
+      pushEndpoint: interpolate`${pvaultSubscriber.uri}/`,
+      oidcToken: {
+        serviceAccountEmail: pvaultSubscriberInvokerAccount.email,
+        audience: pvaultSubscriber.uri
+      }
+    }
+  },
+  { dependsOn: [grantInvokeForPvaultSubscriberInvoker] }
+)
+
+// ---------------------------------------------------------------------
+// Pvault event pusher
+// ---------------------------------------------------------------------
+const pvaultPusherAccount = new gcp.serviceaccount.Account(
+  "pvault-pusher-sa",
+  { accountId: "pvault-pusher-sa", displayName: "pvault-pusher-sa" },
+  { dependsOn: [projectServices.iam] }
+)
+
+const webhookSecret = new gcp.secretmanager.Secret(
+  "helius-webhook-secret",
+  { secretId: "helius-webhook-secret", replication: { auto: {} } },
+  { dependsOn: [projectServices.secretmanager] }
+)
+
+const webhookSecretVersion = new gcp.secretmanager.SecretVersion("helius-webhook-secret-version", {
+  secret: webhookSecret.id,
+  secretData: heliusWebhookSecret
+})
+
+const grantAccessWebhookSecretForPvaultPusher = new gcp.secretmanager.SecretIamMember(
+  "grant-access-webhook-secret-for-pvault-pusher",
+  {
+    secretId: webhookSecret.id,
+    role: "roles/secretmanager.secretAccessor",
+    member: interpolate`serviceAccount:${pvaultPusherAccount.email}`
+  }
+)
+
+const grantPublishForPvaultPusher = new gcp.pubsub.TopicIAMMember(
+  "grant-publish-for-pvault-pusher",
+  {
+    topic: eventTopic.name,
+    role: "roles/pubsub.publisher",
+    member: interpolate`serviceAccount:${pvaultPusherAccount.email}`
+  }
+)
+
+const pusherService = new gcp.cloudrunv2.Service(
+  "pvault-event-pusher",
+  {
+    name: "pvault-event-pusher",
+    location: region,
+    deletionProtection: false,
+    ingress: "INGRESS_TRAFFIC_ALL",
+    invokerIamDisabled: true,
+    template: {
+      serviceAccount: pvaultPusherAccount.email,
+      scaling: { minInstanceCount: 0, maxInstanceCount: 1 },
+      containers: [
+        {
+          image: images.eventPusher.ref,
+          ports: { containerPort: 8080 },
+          startupProbe: {
+            httpGet: { path: "/", port: 8080 },
+            periodSeconds: 5,
+            timeoutSeconds: 2,
+            failureThreshold: 48
+          },
+          resources: { limits: { cpu: "1", memory: "512Mi" } },
+          envs: [
+            {
+              name: "HELIUS_WEBHOOK_SECRET",
+              valueSource: {
+                secretKeyRef: {
+                  secret: webhookSecret.secretId,
+                  version: webhookSecretVersion.version
+                }
+              }
+            },
+            { name: "PVAULT_EVENT_TOPIC", value: eventTopic.id }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    dependsOn: [
+      projectServices.run,
+      eventChannel,
+      grantAccessWebhookSecretForPvaultPusher,
+      grantPublishForPvaultPusher
+    ]
+  }
+)
+
+// ---------------------------------------------------------------------
+// Public API service
+// ---------------------------------------------------------------------
+const apiAccount = new gcp.serviceaccount.Account(
+  "api-sa",
+  { accountId: "api-sa", displayName: "api-sa" },
+  { dependsOn: [projectServices.iam] }
+)
+
+const grantAccessDbSecretForApi = new gcp.secretmanager.SecretIamMember(
+  "grant-access-db-secret-for-api",
+  {
+    secretId: databaseSecret.id,
+    role: "roles/secretmanager.secretAccessor",
+    member: interpolate`serviceAccount:${apiAccount.email}`
+  }
+)
+
+const apiService = new gcp.cloudrunv2.Service(
+  "api",
+  {
+    name: "api",
+    location: region,
+    deletionProtection: false,
+    ingress: "INGRESS_TRAFFIC_ALL",
+    invokerIamDisabled: true,
+    template: {
+      serviceAccount: apiAccount.email,
+      scaling: { minInstanceCount: 0, maxInstanceCount: 1 },
+      vpcAccess: {
+        egress: "PRIVATE_RANGES_ONLY",
+        networkInterfaces: [{ network: vpc.id, subnetwork: subnet.id }]
+      },
+      containers: [
+        {
+          image: images.api.ref,
+          ports: { containerPort: 8080 },
+          startupProbe: {
+            httpGet: { path: "/", port: 8080 },
+            periodSeconds: 5,
+            timeoutSeconds: 2,
+            failureThreshold: 48
+          },
+          resources: { limits: { cpu: "1", memory: "512Mi" } },
+          envs: [
+            {
+              name: "DATABASE_URL",
+              valueSource: {
+                secretKeyRef: {
+                  secret: databaseSecret.secretId,
+                  version: databaseSecretVersion.version
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    dependsOn: [projectServices.run, migration, grantAccessDbSecretForApi]
+  }
+)
+
+export const apiUrl = apiService.uri
+export const heliusWebhookUrl = interpolate`${pusherService.uri}/helius/pvault`

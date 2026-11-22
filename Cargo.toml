@@ -7,9 +7,10 @@ members = [
   "crates/error",
   "crates/http",
   "crates/shared",
-  "crates/functions/pubsub",
+  "crates/functions/pvault-subscriber",
   "crates/functions/api",
-  "crates/functions/cron",
+  "crates/functions/pvault-pusher",
+  "crates/functions/pvault-emitter",
   "crates/database",
   "crates/database/migration",
 ]

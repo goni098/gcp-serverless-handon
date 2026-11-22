@@ -21,9 +21,9 @@ RUN cargo build --release --locked --workspace
 
 FROM gcr.io/distroless/cc-debian12:nonroot AS migration
 WORKDIR /app
-COPY --from=build /app/target/release/cli /usr/local/bin/cli
-ENTRYPOINT ["/usr/local/bin/cli"]
-CMD ["migration", "apply"]
+COPY --from=build /app/target/release/migration /usr/local/bin/migration
+ENTRYPOINT ["/usr/local/bin/migration"]
+CMD ["up"]
 
 FROM gcr.io/distroless/cc-debian12:nonroot AS function
 ARG FUNCTION
