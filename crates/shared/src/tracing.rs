@@ -6,12 +6,13 @@ use tracing_subscriber::{EnvFilter, Layer, filter, fmt};
 pub fn install() {
     let crates = [
         "api",
-        "cron",
         "database",
         "error",
         "http",
         "migration",
-        "pubsub",
+        "pvault_emitter",
+        "pvault_pusher",
+        "pvault_subscriber",
         "shared",
     ];
 

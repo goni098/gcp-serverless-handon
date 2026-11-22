@@ -9,8 +9,28 @@ pub const EVENT_TYPE: &str = "google.cloud.pubsub.topic.v1.messagePublished";
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PubsubEvent {
+    #[serde(deserialize_with = "deserialize_pubsub_message")]
     pub message: Message,
     pub subscription: String,
+}
+
+fn deserialize_pubsub_message<'de, D>(deserializer: D) -> Result<Message, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let mut message = serde_json::Map::deserialize(deserializer)?;
+
+    // Wrapped push requests include both spellings, which the SDK treats as duplicate fields.
+    for (canonical, alias) in [("messageId", "message_id"), ("publishTime", "publish_time")] {
+        if message
+            .get(canonical)
+            .is_some_and(|value| message.get(alias) == Some(value))
+        {
+            message.remove(alias);
+        }
+    }
+
+    serde_json::from_value(serde_json::Value::Object(message)).map_err(serde::de::Error::custom)
 }
 
 impl<S> FromRequest<S> for PubsubEvent
@@ -28,6 +48,7 @@ where
                 .get(axum::http::header::CONTENT_TYPE)
                 .and_then(|value| value.to_str().ok())
                 .is_some_and(|value| value.starts_with("application/cloudevents+json"));
+
         if !is_cloud_event {
             return axum::Json::<Self>::from_request(req, state)
                 .await
