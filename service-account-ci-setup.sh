@@ -96,26 +96,6 @@ gcloud artifacts repositories add-iam-policy-binding "$ARTIFACT_REPOSITORY" \
   --role=roles/artifactregistry.writer \
   --format=none
 
-# 7. Let Pulumi attach the dev stack's runtime and invoker identities.
-stack_service_accounts=(
-  migration-sa
-  pvault-subscriber-sa
-  pvault-subscriber-invoker-sa
-  pvault-pusher-sa
-  pvault-emitter-sa
-  pvault-emitter-invoker-sa
-  api-sa
-)
-
-for account in "${stack_service_accounts[@]}"; do
-  printf 'Granting Service Account User on %s\n' "$account"
-  gcloud iam service-accounts add-iam-policy-binding \
-    "${account}@${PROJECT_ID}.iam.gserviceaccount.com" \
-    --project="$PROJECT_ID" \
-    --member="serviceAccount:${DEPLOY_SA}" \
-    --role=roles/iam.serviceAccountUser \
-    --format=none
-done
 
 printf '\nGitHub Actions repository variables\n'
 printf 'GCP_WORKLOAD_IDENTITY_PROVIDER=%s\n' "$PROVIDER_RESOURCE"
