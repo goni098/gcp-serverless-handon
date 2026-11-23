@@ -6,14 +6,55 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-dev
   cancel-in-progress: false
 
 jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install nightly rustfmt
+        run: rustup toolchain install nightly --profile minimal --component rustfmt
+
+      - name: Check Rust formatting
+        run: |
+          cargo +nightly fmt --all --check
+          cargo +nightly fmt --manifest-path pvault/Cargo.toml --all --check
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          package_json_file: infra/package.json
+
+      - name: Check Pulumi formatting and lint
+        working-directory: infra
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run format:check
+          pnpm run lint
+
+      - name: Run Clippy on the server workspace
+        run: cargo +stable clippy --locked --workspace -- -D warnings
+
+      - name: Run Clippy on the pvault workspace
+        working-directory: pvault
+        run: cargo +stable clippy --locked --workspace -- -D warnings
+
   deploy:
+    needs: checks
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
