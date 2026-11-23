@@ -140,9 +140,11 @@ const repository = new gcp.artifactregistry.Repository(
 )
 
 const workspaceRoot = resolve(__dirname, "../..")
+const dockerBuilder = process.env.BUILDX_BUILDER
 const sharedImageBuildConfig = {
   context: { location: workspaceRoot },
   dockerfile: { location: resolve(workspaceRoot, "docker/Dockerfile") },
+  builder: dockerBuilder ? { name: dockerBuilder } : undefined,
   platforms: [dockerBuild.Platform.Linux_amd64],
   buildOnPreview: false
 }
@@ -196,7 +198,7 @@ const images = {
 // ---------------------------------------------------------------------
 const migrationAccount = new gcp.serviceaccount.Account(
   "migration-sa",
-  { accountId: "migration-sa", displayName: "Database migration" },
+  { accountId: "migration-sa", displayName: "migration-sa" },
   { dependsOn: [projectServices.iam] }
 )
 
@@ -474,13 +476,13 @@ const pusherService = new gcp.cloudrunv2.Service(
 // ---------------------------------------------------------------------
 const pvaultEmitterAccount = new gcp.serviceaccount.Account(
   "pvault-emitter-sa",
-  { accountId: "pvault-emitter-sa", displayName: "Pvault emitter" },
+  { accountId: "pvault-emitter-sa", displayName: "pvault-emitter-sa" },
   { dependsOn: [projectServices.iam] }
 )
 
 const pvaultEmitterInvokerAccount = new gcp.serviceaccount.Account(
   "pvault-emitter-invoker-sa",
-  { accountId: "pvault-emitter-invoker-sa", displayName: "Pvault emitter scheduler" },
+  { accountId: "pvault-emitter-invoker-sa", displayName: "pvault-emitter-invoker-sa" },
   { dependsOn: [projectServices.iam] }
 )
 

@@ -1,0 +1,56 @@
+name: Deploy dev stack
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          package_json_file: infra/package.json
+
+      - name: Install Pulumi project dependencies
+        working-directory: infra
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up native AMD64 Buildx builder
+        id: buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          name: deploy-amd64
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Deploy dev stack
+        uses: pulumi/actions@v6
+        with:
+          command: up
+          stack-name: ${{ vars.PULUMI_DEV_STACK }}
+          work-dir: infra
+        env:
+          BUILDX_BUILDER: ${{ steps.buildx.outputs.name }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
