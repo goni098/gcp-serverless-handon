@@ -24,7 +24,7 @@ async fn main() -> Result<(), std::io::Error> {
     let listener = tokio::net::TcpListener::bind((Ipv4Addr::UNSPECIFIED, port)).await?;
 
     let app = Router::new()
-        .route("/", get(async || "check build cache"))
+        .route("/", get(async || "hallo!"))
         .merge(routes::stats::routes())
         .layer(middleware::from_fn(
             shared_function::middlewares::error_reporter,
