@@ -9,7 +9,8 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS build
 COPY --from=planner /app/recipe.json ./recipe.json
-RUN cargo chef cook --release --workspace --recipe-path recipe.json
+# Cargo Chef compiles placeholder sources that intentionally leave dependencies unused.
+RUN CARGO_BUILD_WARNINGS=allow cargo chef cook --release --workspace --recipe-path recipe.json
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 RUN cargo build --release --locked --workspace
