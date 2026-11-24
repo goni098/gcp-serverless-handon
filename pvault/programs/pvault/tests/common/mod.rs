@@ -10,18 +10,18 @@ use solana_pubkey::Pubkey;
 use solana_sdk_ids::system_program;
 use spl_token_interface::state::{Account as TokenAccount, AccountState, Mint};
 
-pub(crate) struct TransferFixture {
+pub struct TransferFixture {
     mollusk: Mollusk,
     accounts: Vec<(Pubkey, Account)>,
-    pub(crate) signer: Pubkey,
-    pub(crate) mint: Pubkey,
-    pub(crate) vault: Pubkey,
-    pub(crate) vault_token: Pubkey,
-    pub(crate) wallet_token: Pubkey,
+    pub signer: Pubkey,
+    pub mint: Pubkey,
+    pub vault: Pubkey,
+    pub vault_token: Pubkey,
+    pub wallet_token: Pubkey,
 }
 
 impl TransferFixture {
-    pub(crate) fn new(
+    pub fn new(
         signer: Pubkey,
         authority: Pubkey,
         wallet_balance: u64,
@@ -94,7 +94,7 @@ impl TransferFixture {
         }
     }
 
-    pub(crate) fn check_transfer(
+    pub fn check_transfer(
         &self,
         instruction: Instruction,
         wallet_balance: u64,

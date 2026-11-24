@@ -44,7 +44,7 @@ pub struct Withdraw {
     pub token_program: Interface<TokenInterface>,
 }
 
-pub(crate) fn process(ctx: &mut Context<Withdraw>, amount: u64) -> Result<()> {
+pub fn process(ctx: &mut Context<Withdraw>, amount: u64) -> Result<()> {
     let accounts = &mut ctx.accounts;
 
     let bump = [accounts.vault.bump];

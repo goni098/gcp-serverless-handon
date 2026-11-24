@@ -42,7 +42,7 @@ pub struct Deposit {
     pub token_program: Interface<TokenInterface>,
 }
 
-pub(crate) fn process(ctx: &mut Context<Deposit>, amount: u64) -> Result<()> {
+pub fn process(ctx: &mut Context<Deposit>, amount: u64) -> Result<()> {
     require!(amount > 0, ErrorCode::ZeroDepositAmount);
 
     let accounts = &mut ctx.accounts;
