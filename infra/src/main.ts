@@ -161,24 +161,44 @@ const repository = new gcp.artifactregistry.Repository(
 
 const workspaceRoot = resolve(__dirname, "../..")
 const dockerBuilder = process.env.BUILDX_BUILDER
+const registryAddress = `${region}-docker.pkg.dev`
+const repositoryRef = interpolate`${registryAddress}/${repository.project}/${repository.repositoryId}`
+const workspaceCacheRef = interpolate`${repositoryRef}/workspace-build-cache:${getStack()}-amd64`
+const clientConfig = gcp.organizations.getClientConfigOutput()
+
 const sharedImageBuildConfig = {
   context: { location: workspaceRoot },
   dockerfile: { location: resolve(workspaceRoot, "docker/Dockerfile") },
   builder: dockerBuilder ? { name: dockerBuilder } : undefined,
   platforms: [dockerBuild.Platform.Linux_amd64],
+  cacheFrom: [{ registry: { ref: workspaceCacheRef } }],
+  registries: [
+    {
+      address: registryAddress,
+      username: "oauth2accesstoken",
+      password: secret(clientConfig.accessToken)
+    }
+  ],
   buildOnPreview: false
 }
 
-// Build the Rust workspace once so the four runtime images can reuse its cache.
+// Export the workspace layers once so later builds can reuse them across runners.
 const workspaceImage = new dockerBuild.Image("workspace-image", {
   ...sharedImageBuildConfig,
   target: "build",
+  cacheTo: [
+    {
+      registry: {
+        ref: workspaceCacheRef,
+        mode: dockerBuild.CacheMode.Max,
+        imageManifest: true,
+        ociMediaTypes: true
+      }
+    }
+  ],
   exports: [{ cacheonly: {} }],
   push: false
 })
-
-const registryAddress = `${region}-docker.pkg.dev`
-const clientConfig = gcp.organizations.getClientConfigOutput()
 
 function createImage(
   binary: "api" | "pvault-subscriber" | "pvault-emitter" | "pvault-pusher" | "migration"
@@ -189,16 +209,7 @@ function createImage(
       ...sharedImageBuildConfig,
       target: binary === "migration" ? "migration" : "function",
       buildArgs: binary === "migration" ? undefined : { FUNCTION: binary },
-      tags: [
-        interpolate`${registryAddress}/${repository.project}/${repository.repositoryId}/${binary}:${getStack()}`
-      ],
-      registries: [
-        {
-          address: registryAddress,
-          username: "oauth2accesstoken",
-          password: secret(clientConfig.accessToken)
-        }
-      ],
+      tags: [interpolate`${repositoryRef}/${binary}:${getStack()}`],
       push: true
     },
     { dependsOn: [workspaceImage] }
