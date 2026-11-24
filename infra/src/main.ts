@@ -1,6 +1,6 @@
 import * as dockerBuild from "@pulumi/docker-build"
 import * as gcp from "@pulumi/gcp"
-import { Config, getStack, interpolate, secret } from "@pulumi/pulumi"
+import { all, Config, getStack, interpolate, secret } from "@pulumi/pulumi"
 import { RandomId, RandomPassword } from "@pulumi/random"
 import { resolve } from "node:path"
 
@@ -10,6 +10,7 @@ import { resolve } from "node:path"
 const config = new Config()
 const region = config.require("region")
 const project = new Config("gcp").require("project")
+const githubCiServiceAccount = config.require("githubCiServiceAccount")
 const heliusWebhookSecret = config.requireSecret("heliusWebhookSecret")
 const solRpcUrl = config.requireSecret("solRpcUrl")
 const solPk = config.requireSecret("solPk")
@@ -36,6 +37,25 @@ const projectServices = Object.fromEntries(
     new gcp.projects.Service(name, { service, disableOnDestroy: false })
   ])
 ) as ProjectServices
+
+function createWorkloadAccount(accountId: string) {
+  const account = new gcp.serviceaccount.Account(
+    accountId,
+    { accountId, displayName: accountId },
+    { dependsOn: [projectServices.iam] }
+  )
+
+  const grant = new gcp.serviceaccount.IAMMember(`${accountId}-ci-attach`, {
+    serviceAccountId: account.name,
+    role: "roles/iam.serviceAccountUser",
+    member: `serviceAccount:${githubCiServiceAccount}`
+  })
+
+  // Resources that attach the account wait for the IAM grant.
+  const attachmentEmail = all([account.email, grant.id]).apply(([email]) => email)
+
+  return { email: account.email, attachmentEmail }
+}
 
 // ---------------------------------------------------------------------
 // VPC and subnet
@@ -196,11 +216,7 @@ const images = {
 // ---------------------------------------------------------------------
 // Database migration job
 // ---------------------------------------------------------------------
-const migrationAccount = new gcp.serviceaccount.Account(
-  "migration-sa",
-  { accountId: "migration-sa", displayName: "migration-sa" },
-  { dependsOn: [projectServices.iam] }
-)
+const migrationAccount = createWorkloadAccount("migration-sa")
 
 const grantAccessDbSecretForMigration = new gcp.secretmanager.SecretIamMember(
   "grant-access-for-db-secret-for-migration",
@@ -231,7 +247,7 @@ const migration = new gcp.cloudrunv2.Job(
       taskCount: 1,
       parallelism: 1,
       template: {
-        serviceAccount: migrationAccount.email,
+        serviceAccount: migrationAccount.attachmentEmail,
         timeout: "600s",
         maxRetries: 0,
         vpcAccess: {
@@ -267,24 +283,10 @@ const migration = new gcp.cloudrunv2.Job(
 // ---------------------------------------------------------------------
 // Pub/Sub topic and private subscriber
 // ---------------------------------------------------------------------
-const pvaultSubscriberAccount = new gcp.serviceaccount.Account(
-  "pvault-subscriber-sa",
-  {
-    accountId: "pvault-subscriber-sa",
-    displayName: "pvault-subscriber-sa"
-  },
-  { dependsOn: [projectServices.iam] }
-)
+const pvaultSubscriberAccount = createWorkloadAccount("pvault-subscriber-sa")
 
 // identity for pvault subscriber caller
-const pvaultSubscriberInvokerAccount = new gcp.serviceaccount.Account(
-  "pvault-subscriber-invoker-sa",
-  {
-    accountId: "pvault-subscriber-invoker-sa",
-    displayName: "pvault-subscriber-invoker-sa"
-  },
-  { dependsOn: [projectServices.iam] }
-)
+const pvaultSubscriberInvokerAccount = createWorkloadAccount("pvault-subscriber-invoker-sa")
 
 const eventTopic = new gcp.pubsub.Topic(
   "pvault-events",
@@ -310,7 +312,7 @@ const pvaultSubscriber = new gcp.cloudrunv2.Service(
     ingress: "INGRESS_TRAFFIC_INTERNAL_ONLY",
     invokerIamDisabled: false,
     template: {
-      serviceAccount: pvaultSubscriberAccount.email,
+      serviceAccount: pvaultSubscriberAccount.attachmentEmail,
       timeout: "300s",
       maxInstanceRequestConcurrency: 1,
       scaling: { minInstanceCount: 0, maxInstanceCount: 1 },
@@ -377,7 +379,7 @@ const eventChannel = new gcp.pubsub.Subscription(
     pushConfig: {
       pushEndpoint: interpolate`${pvaultSubscriber.uri}/`,
       oidcToken: {
-        serviceAccountEmail: pvaultSubscriberInvokerAccount.email,
+        serviceAccountEmail: pvaultSubscriberInvokerAccount.attachmentEmail,
         audience: pvaultSubscriber.uri
       }
     }
@@ -388,11 +390,7 @@ const eventChannel = new gcp.pubsub.Subscription(
 // ---------------------------------------------------------------------
 // Pvault event pusher
 // ---------------------------------------------------------------------
-const pvaultPusherAccount = new gcp.serviceaccount.Account(
-  "pvault-pusher-sa",
-  { accountId: "pvault-pusher-sa", displayName: "pvault-pusher-sa" },
-  { dependsOn: [projectServices.iam] }
-)
+const pvaultPusherAccount = createWorkloadAccount("pvault-pusher-sa")
 
 const webhookSecret = new gcp.secretmanager.Secret(
   "helius-webhook-secret",
@@ -432,7 +430,7 @@ const pusherService = new gcp.cloudrunv2.Service(
     ingress: "INGRESS_TRAFFIC_ALL",
     invokerIamDisabled: true,
     template: {
-      serviceAccount: pvaultPusherAccount.email,
+      serviceAccount: pvaultPusherAccount.attachmentEmail,
       scaling: { minInstanceCount: 1, maxInstanceCount: 3 },
       containers: [
         {
@@ -474,17 +472,9 @@ const pusherService = new gcp.cloudrunv2.Service(
 // ---------------------------------------------------------------------
 // Hourly pvault emitter job
 // ---------------------------------------------------------------------
-const pvaultEmitterAccount = new gcp.serviceaccount.Account(
-  "pvault-emitter-sa",
-  { accountId: "pvault-emitter-sa", displayName: "pvault-emitter-sa" },
-  { dependsOn: [projectServices.iam] }
-)
+const pvaultEmitterAccount = createWorkloadAccount("pvault-emitter-sa")
 
-const pvaultEmitterInvokerAccount = new gcp.serviceaccount.Account(
-  "pvault-emitter-invoker-sa",
-  { accountId: "pvault-emitter-invoker-sa", displayName: "pvault-emitter-invoker-sa" },
-  { dependsOn: [projectServices.iam] }
-)
+const pvaultEmitterInvokerAccount = createWorkloadAccount("pvault-emitter-invoker-sa")
 
 const solRpcUrlSecret = new gcp.secretmanager.Secret(
   "sol-rpc-url",
@@ -536,7 +526,7 @@ const pvaultEmitter = new gcp.cloudrunv2.Job(
       taskCount: 1,
       parallelism: 1,
       template: {
-        serviceAccount: pvaultEmitterAccount.email,
+        serviceAccount: pvaultEmitterAccount.attachmentEmail,
         timeout: "300s",
         maxRetries: 0,
         containers: [
@@ -601,7 +591,7 @@ new gcp.cloudscheduler.Job(
       uri: interpolate`https://run.googleapis.com/v2/projects/${pvaultEmitter.project}/locations/${pvaultEmitter.location}/jobs/${pvaultEmitter.name}:run`,
       headers: { "Content-Type": "application/json" },
       body: Buffer.from("{}").toString("base64"),
-      oauthToken: { serviceAccountEmail: pvaultEmitterInvokerAccount.email }
+      oauthToken: { serviceAccountEmail: pvaultEmitterInvokerAccount.attachmentEmail }
     }
   },
   { dependsOn: [projectServices.scheduler, grantInvokeForPvaultEmitterInvoker] }
@@ -610,11 +600,7 @@ new gcp.cloudscheduler.Job(
 // ---------------------------------------------------------------------
 // Public API service
 // ---------------------------------------------------------------------
-const apiAccount = new gcp.serviceaccount.Account(
-  "api-sa",
-  { accountId: "api-sa", displayName: "api-sa" },
-  { dependsOn: [projectServices.iam] }
-)
+const apiAccount = createWorkloadAccount("api-sa")
 
 const grantAccessDbSecretForApi = new gcp.secretmanager.SecretIamMember(
   "grant-access-db-secret-for-api",
@@ -634,7 +620,7 @@ const apiService = new gcp.cloudrunv2.Service(
     ingress: "INGRESS_TRAFFIC_ALL",
     invokerIamDisabled: true,
     template: {
-      serviceAccount: apiAccount.email,
+      serviceAccount: apiAccount.attachmentEmail,
       scaling: { minInstanceCount: 0, maxInstanceCount: 1 },
       vpcAccess: {
         egress: "PRIVATE_RANGES_ONLY",

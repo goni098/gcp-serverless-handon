@@ -1,7 +1,6 @@
 use std::process::ExitCode;
 
 use error::R;
-use pvault_client::pvault;
 use shared::env::Env;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::instruction::Instruction;

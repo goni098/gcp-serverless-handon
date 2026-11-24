@@ -43,6 +43,13 @@ jobs:
           pnpm run format:check
           pnpm run lint
 
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            pvault -> target
+
       - name: Run Clippy on the server workspace
         run: cargo +stable clippy --locked --workspace -- -D warnings
 

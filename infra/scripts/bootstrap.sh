@@ -5,11 +5,9 @@ set -euo pipefail
 
 PROJECT_ID=goni-serverless-dev-20261113
 PROJECT_NUMBER=918697368937
-REGION=asia-southeast3
 GITHUB_REPO=goni098/gcp-serverless-handon
 POOL_ID=github
 PROVIDER_ID=github-provider
-ARTIFACT_REPOSITORY=images-repository
 DEPLOY_SA="github-ci-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 POOL_RESOURCE="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}"
 PROVIDER_RESOURCE="${POOL_RESOURCE}/providers/${PROVIDER_ID}"
@@ -87,15 +85,6 @@ for role in "${project_roles[@]}"; do
     --condition=None \
     --format=none
 done
-
-# 6. Let the deploy service account push images to the dev repository.
-gcloud artifacts repositories add-iam-policy-binding "$ARTIFACT_REPOSITORY" \
-  --project="$PROJECT_ID" \
-  --location="$REGION" \
-  --member="serviceAccount:${DEPLOY_SA}" \
-  --role=roles/artifactregistry.writer \
-  --format=none
-
 
 printf '\nGitHub Actions repository variables\n'
 printf 'GCP_WORKLOAD_IDENTITY_PROVIDER=%s\n' "$PROVIDER_RESOURCE"

@@ -7,7 +7,7 @@ use database::repositories;
 use http::exception::{HttpException, Rh};
 use http::extractors::{Pool, PubsubEvent};
 use http::middlewares::error_reporter;
-use pvault_client::pvault::parsers::Event as PvaultEvent;
+use pvault::parsers::Event as PvaultEvent;
 use shared::env::Env;
 use shared::pubsub::PvaultEventPubsubData;
 

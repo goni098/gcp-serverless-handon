@@ -1,5 +1,6 @@
 config:
   gcp:project: goni-serverless-dev-20261113
+  serverless:githubCiServiceAccount: github-ci-sa@goni-serverless-dev-20261113.iam.gserviceaccount.com
   serverless:region: asia-southeast3
   serverless:heliusWebhookSecret:
     secure: AAABALNGFMyCZENbudCxnmgvjlqm7yVXZ2NcefNuCQeaWBGLJgBq

@@ -6,13 +6,10 @@ WORKDIR /app
 FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
-COPY pvault/Cargo.toml ./pvault/Cargo.toml
-COPY pvault/clients/pvault ./pvault/clients/pvault
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS build
 COPY --from=planner /app/recipe.json ./recipe.json
-COPY --from=planner /app/pvault ./pvault
 RUN cargo chef cook --release --workspace --recipe-path recipe.json
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates

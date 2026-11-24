@@ -3935,7 +3935,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pvault-client"
+name = "pvault"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
@@ -3946,7 +3946,7 @@ name = "pvault-emitter"
 version = "0.1.0"
 dependencies = [
  "error",
- "pvault-client",
+ "pvault",
  "shared",
  "solana-client",
  "solana-sdk",
@@ -3984,7 +3984,7 @@ dependencies = [
  "database",
  "error",
  "http 0.1.0",
- "pvault-client",
+ "pvault",
  "serde_json",
  "shared",
  "tokio",

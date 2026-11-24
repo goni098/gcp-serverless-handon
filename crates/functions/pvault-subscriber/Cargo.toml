@@ -11,7 +11,7 @@ borsh.workspace = true
 serde_json.workspace = true
 
 http = { path = "../../http", default-features = false }
-pvault-client = { path = "../../../pvault/clients/pvault", default-features = false }
+pvault = { path = "../../pvault" }
 shared = { path = "../../shared", default-features = false }
 database = { path = "../../database", default-features = false }
 error = { path = "../../error", default-features = false }

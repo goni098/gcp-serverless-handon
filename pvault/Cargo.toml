@@ -1,5 +1,5 @@
 [workspace]
-members = ["programs/*", "clients/*"]
+members = ["programs/*"]
 resolver = "3"
 
 [workspace.package]
