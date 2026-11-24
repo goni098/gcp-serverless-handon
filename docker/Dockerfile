@@ -1,6 +1,5 @@
-FROM rust:1.100-bookworm AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-bookworm AS chef
 ARG CARGO_BUILD_JOBS
-RUN cargo install cargo-chef --version 0.1.78 --locked
 WORKDIR /app
 
 FROM chef AS planner
