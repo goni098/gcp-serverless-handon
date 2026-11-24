@@ -2,12 +2,13 @@ mod common;
 
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::{InstructionData, ToAccountMetas};
+use anyhow::Result;
 use common::TransferFixture;
 use mollusk_svm_programs_token::token;
 use solana_pubkey::Pubkey;
 
 #[test]
-fn deposit_transfers_tokens_from_a_non_authority_wallet() {
+fn deposit_transfers_tokens_from_a_non_authority_wallet() -> Result<()> {
     let fixture = TransferFixture::new(Pubkey::new_unique(), Pubkey::new_unique(), 100, 10);
     let instruction = Instruction::new_with_bytes(
         pvault::id(),
@@ -23,5 +24,5 @@ fn deposit_transfers_tokens_from_a_non_authority_wallet() {
         .to_account_metas(None),
     );
 
-    fixture.check_transfer(instruction, 60, 50);
+    fixture.check_transfer(instruction, 60, 50)
 }

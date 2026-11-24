@@ -1,5 +1,6 @@
 use anchor_lang::Discriminator;
 use anchor_lang::solana_program::instruction::Instruction;
+use anyhow::{Context, Result};
 use mollusk_svm::Mollusk;
 use mollusk_svm::result::Check;
 use mollusk_svm_programs_token::{associated_token, token};
@@ -21,12 +22,7 @@ pub struct TransferFixture {
 }
 
 impl TransferFixture {
-    pub fn new(
-        signer: Pubkey,
-        authority: Pubkey,
-        wallet_balance: u64,
-        vault_balance: u64,
-    ) -> Self {
+    pub fn new(signer: Pubkey, authority: Pubkey, wallet_balance: u64, vault_balance: u64) -> Self {
         let program_id = pvault::id();
         let mut mollusk = Mollusk::new(&program_id, "pvault");
         token::add_program(&mut mollusk);
@@ -99,7 +95,7 @@ impl TransferFixture {
         instruction: Instruction,
         wallet_balance: u64,
         vault_balance: u64,
-    ) {
+    ) -> Result<()> {
         let result = self.mollusk.process_and_validate_instruction(
             &instruction,
             &self.accounts,
@@ -110,9 +106,14 @@ impl TransferFixture {
             (self.wallet_token, wallet_balance),
             (self.vault_token, vault_balance),
         ] {
-            let account = result.get_account(&address).expect("token account");
-            let token = TokenAccount::unpack(&account.data).expect("initialized token account");
+            let account = result
+                .get_account(&address)
+                .with_context(|| format!("Missing token account {address}"))?;
+            let token = TokenAccount::unpack(&account.data)
+                .with_context(|| format!("Could not unpack token account {address}"))?;
             assert_eq!(token.amount, expected_balance, "balance of {address}");
         }
+
+        Ok(())
     }
 }

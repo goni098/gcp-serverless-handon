@@ -1,5 +1,6 @@
 use std::net::Ipv4Addr;
 
+use app_error::R;
 use axum::routing::get;
 use axum::{Router, middleware};
 use shared::env::Env;
@@ -10,16 +11,14 @@ mod routes;
 mod state;
 
 #[tokio::main]
-async fn main() -> Result<(), std::io::Error> {
-    shared::tracing::install();
+async fn main() -> R<()> {
+    shared::tracing::install()?;
     shared::env::load();
 
-    let port = Env::Port.read_to::<u16>().expect("missing or invalid port");
-    let db_url = Env::DatabaseUrl.read().expect("DATABASE_URL is required");
+    let port = Env::Port.read_to::<u16>()?;
+    let db_url = Env::DatabaseUrl.read()?;
 
-    let state = AppState::new(&db_url)
-        .await
-        .expect("could not initialize app state");
+    let state = AppState::new(&db_url).await?;
 
     let listener = tokio::net::TcpListener::bind((Ipv4Addr::UNSPECIFIED, port)).await?;
 
@@ -34,5 +33,6 @@ async fn main() -> Result<(), std::io::Error> {
     tracing::info!(%port, "Listening on 0.0.0.0");
     axum::serve(listener, app)
         .with_graceful_shutdown(shared_function::graceful_shutdown())
-        .await
+        .await?;
+    Ok(())
 }

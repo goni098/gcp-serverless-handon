@@ -1,5 +1,6 @@
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
+use anyhow::{Context, Result};
 use mollusk_svm::Mollusk;
 use mollusk_svm::program::keyed_account_for_system_program;
 use mollusk_svm::result::Check;
@@ -12,7 +13,7 @@ use solana_sdk_ids::system_program;
 use spl_token_interface::state::{Account as TokenAccount, AccountState, Mint};
 
 #[test]
-fn initialize_creates_vault_and_its_token_account() {
+fn initialize_creates_vault_and_its_token_account() -> Result<()> {
     let program_id = pvault::id();
     let mut mollusk = Mollusk::new(&program_id, "pvault");
     token::add_program(&mut mollusk);
@@ -60,21 +61,25 @@ fn initialize_creates_vault_and_its_token_account() {
     let result =
         mollusk.process_and_validate_instruction(&instruction, &accounts, &[Check::success()]);
 
-    let vault_account = result.get_account(&vault).expect("vault account");
+    let vault_account = result
+        .get_account(&vault)
+        .with_context(|| format!("Missing vault account {vault}"))?;
     assert_eq!(vault_account.owner, program_id);
     let vault_state = Vault::try_deserialize(&mut vault_account.data.as_slice())
-        .expect("initialized vault state");
+        .with_context(|| format!("Could not deserialize vault account {vault}"))?;
     assert_eq!(vault_state.authority, payer);
     assert_eq!(vault_state.mint, mint);
     assert_eq!(vault_state.bump, bump);
 
     let token_account = result
         .get_account(&vault_token)
-        .expect("vault token account");
+        .with_context(|| format!("Missing vault token account {vault_token}"))?;
     assert_eq!(token_account.owner, token::ID);
-    let token_state = TokenAccount::unpack(&token_account.data).expect("initialized token account");
+    let token_state = TokenAccount::unpack(&token_account.data)
+        .with_context(|| format!("Could not unpack vault token account {vault_token}"))?;
     assert_eq!(token_state.state, AccountState::Initialized);
     assert_eq!(token_state.owner, vault);
     assert_eq!(token_state.mint, mint);
     assert_eq!(token_state.amount, 0);
+    Ok(())
 }

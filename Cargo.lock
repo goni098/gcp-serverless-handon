@@ -374,13 +374,17 @@ dependencies = [
 name = "app-error"
 version = "0.1.0"
 dependencies = [
+ "base64 0.23.1",
  "google-cloud-gax",
  "google-cloud-pubsub",
+ "http",
  "sea-orm",
  "serde_json",
  "solana-client",
  "solana-sdk",
+ "solana-signature",
  "thiserror 2.0.21",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3405,15 +3409,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nu-ansi-term"
-version = "0.50.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
-dependencies = [
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "num-bigint"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5735,7 +5730,6 @@ version = "4.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7507df0d2c6350053d125e3df200976fdc68d2a942637d11ac657fe7220949a"
 dependencies = [
- "borsh",
  "bytemuck",
  "bytemuck_derive",
  "five8",
@@ -5773,7 +5767,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ea8442b67a58dd54d5497bfc6cd3106b00f9fe6f6877d33c271c3ec4672eedc"
 dependencies = [
  "bincode",
- "borsh",
  "serde",
  "serde_derive",
  "solana-define-syscall 5.4.0",
@@ -6139,7 +6132,6 @@ dependencies = [
  "solana-account-info",
  "solana-big-mod-exp",
  "solana-blake3-hasher",
- "solana-borsh",
  "solana-clock 4.0.0",
  "solana-cpi",
  "solana-define-syscall 5.4.0",
@@ -8251,11 +8243,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
 dependencies = [
  "matchers",
- "nu-ansi-term",
  "once_cell",
  "regex-automata",
  "sharded-slab",
- "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",

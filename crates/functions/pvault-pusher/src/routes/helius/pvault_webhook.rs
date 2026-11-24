@@ -1,3 +1,4 @@
+use app_error::AppError;
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -47,7 +48,11 @@ impl RawTransaction {
             .enumerate()
             .filter_map(|(ix, log)| {
                 let encoded = log.strip_prefix("Program data: ")?;
-                let event_bytes = STANDARD.decode(encoded).ok()?;
+                let event_bytes = STANDARD
+                    .decode(encoded)
+                    .map_err(AppError::from)
+                    .inspect_err(|error| tracing::debug!(%error, "Skipping invalid base64 log"))
+                    .ok()?;
                 Some(PvaultEventPubsubData {
                     event_bytes,
                     ix: ix as i32,

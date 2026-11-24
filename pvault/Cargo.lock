@@ -1503,26 +1503,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "784e7cf669b80850a1c247dff340d1b28d7ef828a9f37c0abdd84eb1914d07cf"
 dependencies = [
  "mollusk-svm",
- "mollusk-svm-programs-token-2022",
  "solana-account",
  "solana-program-pack",
  "solana-pubkey 4.4.0",
  "solana-rent",
  "spl-associated-token-account-interface",
- "spl-token-interface 3.0.0",
-]
-
-[[package]]
-name = "mollusk-svm-programs-token-2022"
-version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a7d20d65b846f8d0861404d38ce1076ce41fa50ea35c47cd13abe931efca09f"
-dependencies = [
- "mollusk-svm",
- "solana-account",
- "solana-program-pack",
- "solana-pubkey 4.4.0",
- "solana-rent",
  "spl-token-interface 3.0.0",
 ]
 
@@ -1839,6 +1824,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "anyhow",
  "bytemuck",
  "mollusk-svm",
  "mollusk-svm-programs-token",

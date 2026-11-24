@@ -14,7 +14,7 @@ impl HeliusWebhookSecret {
             return Err(AppError::cust("invalid secret"));
         }
 
-        let mut secret = HeaderValue::try_from(secret).map_err(AppError::cust_err)?;
+        let mut secret = HeaderValue::try_from(secret)?;
 
         secret.set_sensitive(true);
 

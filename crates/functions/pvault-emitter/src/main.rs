@@ -1,5 +1,3 @@
-use std::process::ExitCode;
-
 use app_error::R;
 use shared::env::Env;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -18,17 +16,11 @@ use spl_token_2022_interface::instruction::{initialize_mint2, mint_to_checked};
 use spl_token_2022_interface::state::Mint;
 
 #[tokio::main]
-async fn main() -> ExitCode {
-    shared::tracing::install();
+async fn main() -> R<()> {
+    shared::tracing::install()?;
     shared::env::load();
 
-    match run().await {
-        Ok(_) => ExitCode::SUCCESS,
-        Err(error) => {
-            tracing::info!("error {:#?}", error);
-            ExitCode::FAILURE
-        }
-    }
+    run().await
 }
 
 async fn run() -> R<()> {
@@ -39,7 +31,7 @@ async fn run() -> R<()> {
     let sol_pk = Env::SolPk.read()?;
 
     let client = RpcClient::new(rpc_url);
-    let owner_keypair = Keypair::from_base58_string(&sol_pk);
+    let owner_keypair = Keypair::try_from_base58_string(&sol_pk)?;
     let mint_keypair = Keypair::new();
 
     let owner = owner_keypair.pubkey();

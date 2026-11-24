@@ -1,3 +1,4 @@
+use app_error::R;
 use tracing::Level;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -16,16 +17,15 @@ const CRATES: &[&str] = &[
     "shared_function",
 ];
 
-pub fn install() {
+pub fn install() -> R<()> {
+    let mut targets = EnvFilter::from_default_env();
+    for target in CRATES {
+        targets = targets.add_directive(target.parse()?);
+    }
+
     let out_layer = fmt::layer()
         .with_writer(std::io::stdout)
-        .with_filter(
-            CRATES
-                .iter()
-                .fold(EnvFilter::from_default_env(), |filter, c| {
-                    filter.add_directive(c.to_string().parse().expect("Invalid filter directive"))
-                }),
-        )
+        .with_filter(targets)
         .with_filter(filter::filter_fn(|metadata| {
             *metadata.level() != Level::ERROR
         }));
@@ -37,5 +37,7 @@ pub fn install() {
     tracing_subscriber::registry()
         .with(out_layer)
         .with(err_layer)
-        .init();
+        .try_init()?;
+
+    Ok(())
 }

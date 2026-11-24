@@ -1,5 +1,6 @@
 use std::net::Ipv4Addr;
 
+use app_error::R;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Router, middleware};
@@ -77,18 +78,16 @@ async fn handler(Pool(db): Pool, event: PubsubEvent) -> Rh<StatusCode> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), std::io::Error> {
-    shared::tracing::install();
+async fn main() -> R<()> {
+    shared::tracing::install()?;
     shared::env::load();
 
-    let port = Env::Port.read_to::<u16>().expect("invalid port");
+    let port = Env::Port.read_to::<u16>()?;
     let addr = (Ipv4Addr::UNSPECIFIED, port);
 
-    let db_url = Env::DatabaseUrl.read().expect("DATABASE_URL is required");
+    let db_url = Env::DatabaseUrl.read()?;
 
-    let state = AppState::new(&db_url)
-        .await
-        .expect("could not initialize app state");
+    let state = AppState::new(&db_url).await?;
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 

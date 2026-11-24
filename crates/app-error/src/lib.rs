@@ -76,6 +76,18 @@ enum AnyError {
     SerdeJson(#[from] serde_json::Error),
 
     #[error(transparent)]
+    InvalidHeaderValue(#[from] http::header::InvalidHeaderValue),
+
+    #[error(transparent)]
+    Base64(#[from] base64::DecodeError),
+
+    #[error(transparent)]
+    TracingDirective(#[from] tracing_subscriber::filter::ParseError),
+
+    #[error(transparent)]
+    TracingInit(#[from] tracing_subscriber::util::TryInitError),
+
+    #[error(transparent)]
     PubSubClientBuilder(#[from] google_cloud_gax::client_builder::Error),
 
     #[error(transparent)]
@@ -92,4 +104,7 @@ enum AnyError {
 
     #[error(transparent)]
     SolanaSigner(#[from] solana_sdk::signer::SignerError),
+
+    #[error(transparent)]
+    SolanaSignature(#[from] solana_signature::error::Error),
 }

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::exception::HttpException;
 
-pub const EVENT_TYPE: &str = "google.cloud.pubsub.topic.v1.messagePublished";
+const EVENT_TYPE: &str = "google.cloud.pubsub.topic.v1.messagePublished";
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PubsubEvent {
