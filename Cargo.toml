@@ -16,18 +16,40 @@ members = [
   "crates/pvault",
 ]
 
+[workspace.package]
+edition = "2024"
+
 [workspace.dependencies]
-axum = { version = "0.8", default-features = false, features = ["http1", "http2", "json", "macros", "tokio", "tracing"] }
+axum = { version = "0.8", default-features = false, features = [
+  "http1",
+  "http2",
+  "json",
+  "macros",
+  "tokio",
+  "tracing",
+] }
 http = { version = "1", default-features = false, features = ["std"] }
 cloudevents-sdk = { version = "0.9", default-features = false, features = ["axum"] }
-google-cloud-pubsub = { version = "1", default-features = false, features = ["default-rustls-provider"] }
+google-cloud-pubsub = { version = "1", default-features = false, features = [
+  "default-rustls-provider",
+] }
 google-cloud-gax = { version = "1", default-features = false }
 serde = { version = "1", default-features = false, features = ["std", "derive"] }
 serde_json = { version = "1", default-features = false, features = ["std"] }
-tokio = { version = "1", default-features = false, features = ["macros", "rt-multi-thread", "net", "signal", "time"] }
+tokio = { version = "1", default-features = false, features = [
+  "macros",
+  "rt-multi-thread",
+  "net",
+  "signal",
+  "time",
+] }
 thiserror = { version = "2", default-features = false, features = ["std"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "tracing-log"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+  "env-filter",
+  "fmt",
+  "tracing-log",
+] }
 dotenvy = { version = "0.15", default-features = false }
 sea-orm = { version = "2", default-features = false, features = [
   "macros",
