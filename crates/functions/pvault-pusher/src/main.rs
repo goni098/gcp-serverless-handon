@@ -25,11 +25,13 @@ async fn main() -> Result<(), std::io::Error> {
     let app = Router::new()
         .route("/", get(async || "Pvault event pusher is running"))
         .merge(routes::helius::routes())
-        .layer(middleware::from_fn(http::middlewares::error_reporter))
+        .layer(middleware::from_fn(
+            shared_function::middlewares::error_reporter,
+        ))
         .with_state(state);
 
     tracing::info!(%port, "Listening on 0.0.0.0");
     axum::serve(listener, app)
-        .with_graceful_shutdown(shared::functions::graceful_shutdown())
+        .with_graceful_shutdown(shared_function::graceful_shutdown())
         .await
 }

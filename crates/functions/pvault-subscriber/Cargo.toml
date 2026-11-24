@@ -10,8 +10,8 @@ tracing.workspace = true
 borsh.workspace = true
 serde_json.workspace = true
 
-http = { path = "../../http", default-features = false }
+shared-function = { path = "../../shared-function", default-features = false }
 pvault = { path = "../../pvault" }
 shared = { path = "../../shared", default-features = false }
 database = { path = "../../database", default-features = false }
-error = { path = "../../error", default-features = false }
+app-error = { path = "../../app-error", default-features = false }

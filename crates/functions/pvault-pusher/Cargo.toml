@@ -15,5 +15,5 @@ bytes.workspace = true
 borsh.workspace = true
 
 shared = { path = "../../shared", default-features = false }
-http = { path = "../../http", default-features = false }
-error = { path = "../../error", default-features = false }
+shared-function = { path = "../../shared-function", default-features = false }
+app-error = { path = "../../app-error", default-features = false }

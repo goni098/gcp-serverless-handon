@@ -1,5 +1,5 @@
+use app_error::{AppError, R};
 use chrono::Utc;
-use error::{AppError, R};
 use sea_orm::{ConnectionTrait, EntityTrait, Set};
 
 use crate::entity::deposited_event::{ActiveModel, Entity};

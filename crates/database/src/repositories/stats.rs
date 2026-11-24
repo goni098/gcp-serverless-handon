@@ -1,4 +1,4 @@
-use error::R;
+use app_error::R;
 use sea_orm::{DatabaseConnection, EntityTrait, PaginatorTrait};
 use serde::Serialize;
 

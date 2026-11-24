@@ -10,4 +10,4 @@ serde.workspace = true
 tracing.workspace = true
 chrono.workspace = true
 
-error = { path = "../error", default-features = false }
+app-error = { path = "../app-error", default-features = false }

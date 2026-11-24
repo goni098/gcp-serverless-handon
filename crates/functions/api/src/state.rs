@@ -1,6 +1,6 @@
+use app_error::R;
 use axum::extract::FromRef;
 use database::DatabaseConnection;
-use error::R;
 
 #[derive(Clone, FromRef)]
 pub struct AppState {

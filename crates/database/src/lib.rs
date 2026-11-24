@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use error::{AppError, R};
+use app_error::{AppError, R};
 use sea_orm::Database;
 pub use sea_orm::DatabaseConnection;
 

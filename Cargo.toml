@@ -4,8 +4,8 @@ resolver = "2"
 exclude = ["pvault"]
 
 members = [
-  "crates/error",
-  "crates/http",
+  "crates/app-error",
+  "crates/shared-function",
   "crates/shared",
   "crates/functions/pvault-subscriber",
   "crates/functions/api",

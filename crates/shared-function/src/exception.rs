@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
+use app_error::AppError;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use error::AppError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

@@ -4,12 +4,12 @@ use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Router, middleware};
 use database::repositories;
-use http::exception::{HttpException, Rh};
-use http::extractors::{Pool, PubsubEvent};
-use http::middlewares::error_reporter;
 use pvault::parsers::Event as PvaultEvent;
 use shared::env::Env;
 use shared::pubsub::PvaultEventPubsubData;
+use shared_function::exception::{HttpException, Rh};
+use shared_function::extractors::{Pool, PubsubEvent};
+use shared_function::middlewares::error_reporter;
 
 use crate::state::AppState;
 
@@ -100,7 +100,7 @@ async fn main() -> Result<(), std::io::Error> {
     tracing::info!(%port, "Listening on 0.0.0.0");
 
     axum::serve(listener, app)
-        .with_graceful_shutdown(shared::functions::graceful_shutdown())
+        .with_graceful_shutdown(shared_function::graceful_shutdown())
         .await?;
 
     tracing::info!("Server stopped");

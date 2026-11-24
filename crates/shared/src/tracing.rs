@@ -3,23 +3,24 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer, filter, fmt};
 
-pub fn install() {
-    let crates = [
-        "api",
-        "database",
-        "error",
-        "http",
-        "migration",
-        "pvault_emitter",
-        "pvault_pusher",
-        "pvault_subscriber",
-        "shared",
-    ];
+const CRATES: &[&str] = &[
+    "api",
+    "app_error",
+    "database",
+    "migration",
+    "pvault",
+    "pvault_emitter",
+    "pvault_pusher",
+    "pvault_subscriber",
+    "shared",
+    "shared_function",
+];
 
+pub fn install() {
     let out_layer = fmt::layer()
         .with_writer(std::io::stdout)
         .with_filter(
-            crates
+            CRATES
                 .iter()
                 .fold(EnvFilter::from_default_env(), |filter, c| {
                     filter.add_directive(c.to_string().parse().expect("Invalid filter directive"))

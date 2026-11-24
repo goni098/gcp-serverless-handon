@@ -5,9 +5,8 @@ edition = "2024"
 
 [dependencies]
 tracing.workspace = true
-tokio.workspace = true
 tracing-subscriber.workspace = true
 dotenvy.workspace = true
 borsh.workspace = true
 
-error = { path = "../error", default-features = false }
+app-error = { path = "../app-error", default-features = false }

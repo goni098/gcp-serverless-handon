@@ -1,5 +1,5 @@
+use app_error::R;
 use chrono::Utc;
-use error::R;
 use sea_orm::{ConnectionTrait, EntityTrait, Set};
 
 use crate::entity::initialized_vault_event::{ActiveModel, Entity};

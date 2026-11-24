@@ -13,5 +13,5 @@ spl-token-2022-interface.workspace = true
 spl-associated-token-account-interface.workspace = true
 
 shared = { path = "../../shared", default-features = false }
-error = { path = "../../error", default-features = false }
+app-error = { path = "../../app-error", default-features = false }
 pvault = { path = "../../pvault" }

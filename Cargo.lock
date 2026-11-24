@@ -361,13 +361,26 @@ dependencies = [
 name = "api"
 version = "0.1.0"
 dependencies = [
+ "app-error",
  "axum",
  "database",
- "error",
- "http 0.1.0",
  "shared",
+ "shared-function",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "app-error"
+version = "0.1.0"
+dependencies = [
+ "google-cloud-gax",
+ "google-cloud-pubsub",
+ "sea-orm",
+ "serde_json",
+ "solana-client",
+ "solana-sdk",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -695,7 +708,7 @@ dependencies = [
  "bytes",
  "form_urlencoded",
  "futures-util",
- "http 1.5.0",
+ "http",
  "http-body",
  "http-body-util",
  "hyper",
@@ -726,7 +739,7 @@ checksum = "08c78f31d7b1291f7ee735c1c6780ccde7785daae9a9206026862dab7d8792d1"
 dependencies = [
  "bytes",
  "futures-core",
- "http 1.5.0",
+ "http",
  "http-body",
  "http-body-util",
  "mime",
@@ -1220,7 +1233,7 @@ dependencies = [
  "chrono",
  "delegate-attr",
  "hostname",
- "http 1.5.0",
+ "http",
  "http-body-util",
  "hyper",
  "serde",
@@ -1651,8 +1664,8 @@ checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 name = "database"
 version = "0.1.0"
 dependencies = [
+ "app-error",
  "chrono",
- "error",
  "sea-orm",
  "serde",
  "tokio",
@@ -1879,19 +1892,6 @@ checksum = "e35d6e78f4cebb90e51d543db8fe41528851d6deeef6ef21ebd4bfdc1e784776"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "error"
-version = "0.1.0"
-dependencies = [
- "google-cloud-gax",
- "google-cloud-pubsub",
- "sea-orm",
- "serde_json",
- "solana-client",
- "solana-sdk",
- "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2249,7 +2249,7 @@ dependencies = [
  "google-cloud-gax",
  "hex",
  "hmac 0.13.0",
- "http 1.5.0",
+ "http",
  "jiff 0.2.46",
  "reqwest 0.13.5",
  "rustc_version",
@@ -2274,7 +2274,7 @@ dependencies = [
  "futures",
  "google-cloud-rpc",
  "google-cloud-wkt",
- "http 1.5.0",
+ "http",
  "pin-project",
  "rand 0.10.4",
  "serde",
@@ -2298,7 +2298,7 @@ dependencies = [
  "google-cloud-rpc",
  "google-cloud-wkt",
  "h2",
- "http 1.5.0",
+ "http",
  "http-body",
  "http-body-util",
  "hyper",
@@ -2357,7 +2357,7 @@ dependencies = [
  "google-cloud-gax-internal",
  "google-cloud-iam-v1",
  "google-cloud-wkt",
- "http 1.5.0",
+ "http",
  "prost",
  "prost-types",
  "serde",
@@ -2448,7 +2448,7 @@ dependencies = [
  "fnv",
  "futures-core",
  "futures-sink",
- "http 1.5.0",
+ "http",
  "indexmap 2.14.2",
  "slab",
  "tokio",
@@ -2603,21 +2603,6 @@ dependencies = [
 
 [[package]]
 name = "http"
-version = "0.1.0"
-dependencies = [
- "axum",
- "cloudevents-sdk",
- "error",
- "google-cloud-pubsub",
- "sea-orm",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "tracing",
-]
-
-[[package]]
-name = "http"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "918d3568bebf352712bc2ef3d46a8bcf1a75b373be6539de198e9105cbbf9ce0"
@@ -2633,7 +2618,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca2a8f2913ee65f60facd6a5905613afaa448497a0230cc41ce022d93290bc2c"
 dependencies = [
  "bytes",
- "http 1.5.0",
+ "http",
 ]
 
 [[package]]
@@ -2644,7 +2629,7 @@ checksum = "23169fe34a5fbcdd3f3862e78fb9b6fccd5f02a6dc6f732547005d45631ce71c"
 dependencies = [
  "bytes",
  "futures-core",
- "http 1.5.0",
+ "http",
  "http-body",
  "pin-project-lite",
 ]
@@ -2683,7 +2668,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "h2",
- "http 1.5.0",
+ "http",
  "http-body",
  "httparse",
  "httpdate",
@@ -2700,7 +2685,7 @@ version = "0.27.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa8e654703247911e29c23fbeaa261834bd9bb74efba2f9acddc37bfb127f53"
 dependencies = [
- "http 1.5.0",
+ "http",
  "hyper",
  "hyper-util",
  "rustls",
@@ -2733,7 +2718,7 @@ dependencies = [
  "bytes",
  "futures-channel",
  "futures-util",
- "http 1.5.0",
+ "http",
  "http-body",
  "httparse",
  "hyper",
@@ -3945,7 +3930,7 @@ dependencies = [
 name = "pvault-emitter"
 version = "0.1.0"
 dependencies = [
- "error",
+ "app-error",
  "pvault",
  "shared",
  "solana-client",
@@ -3961,16 +3946,16 @@ dependencies = [
 name = "pvault-pusher"
 version = "0.1.0"
 dependencies = [
+ "app-error",
  "axum",
  "base64 0.23.1",
  "borsh",
  "bytes",
- "error",
  "google-cloud-pubsub",
- "http 0.1.0",
  "serde",
  "serde_json",
  "shared",
+ "shared-function",
  "tokio",
  "tracing",
 ]
@@ -3979,14 +3964,14 @@ dependencies = [
 name = "pvault-subscriber"
 version = "0.1.0"
 dependencies = [
+ "app-error",
  "axum",
  "borsh",
  "database",
- "error",
- "http 0.1.0",
  "pvault",
  "serde_json",
  "shared",
+ "shared-function",
  "tokio",
  "tracing",
 ]
@@ -4267,7 +4252,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "http 1.5.0",
+ "http",
  "http-body",
  "http-body-util",
  "hyper",
@@ -4305,7 +4290,7 @@ dependencies = [
  "base64 0.23.1",
  "bytes",
  "futures-core",
- "http 1.5.0",
+ "http",
  "http-body",
  "http-body-util",
  "hyper",
@@ -4342,7 +4327,7 @@ checksum = "57f17d28a6e6acfe1733fe24bcd30774d13bffa4b8a22535b4c8c98423088d4e"
 dependencies = [
  "anyhow",
  "async-trait",
- "http 1.5.0",
+ "http",
  "reqwest 0.12.28",
  "serde",
  "thiserror 1.0.69",
@@ -4986,12 +4971,27 @@ dependencies = [
 name = "shared"
 version = "0.1.0"
 dependencies = [
+ "app-error",
  "borsh",
  "dotenvy",
- "error",
- "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "shared-function"
+version = "0.1.0"
+dependencies = [
+ "app-error",
+ "axum",
+ "cloudevents-sdk",
+ "google-cloud-pubsub",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -8101,7 +8101,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "h2",
- "http 1.5.0",
+ "http",
  "http-body",
  "http-body-util",
  "hyper",
@@ -8162,7 +8162,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-util",
- "http 1.5.0",
+ "http",
  "http-body",
  "http-body-util",
  "pin-project-lite",
@@ -8276,7 +8276,7 @@ checksum = "8628dcc84e5a09eb3d8423d6cb682965dea9133204e8fb3efee74c2a0c259442"
 dependencies = [
  "bytes",
  "data-encoding",
- "http 1.5.0",
+ "http",
  "httparse",
  "log",
  "rand 0.9.5",

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::str::FromStr;
 
-use error::{AppError, R};
+use app_error::{AppError, R};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Env {
